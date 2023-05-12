@@ -1,0 +1,134 @@
+<project name="jQuery Address" default="release" basedir=".">
+
+    <property file="build.properties" />
+    
+    <path id="classpath">
+        <fileset dir="lib" includes="*.jar" />
+    </path>
+        
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties" classpathref="classpath" />
+
+    <target name="release">
+        <antcall target="dist" />
+        <antcall target="test" />
+        <antcall target="samples" />
+        <antcall target="bundle" />
+    </target>
+
+    <target name="bundle">
+        <copy todir="${name}-${version}">
+            <fileset dir="${dist.dir}">
+                <include name="${name}-${version}.js" />
+                <include name="${name}-${version}.min.js" />
+            </fileset>
+            <fileset dir="${basedir}">
+                <include name="${samples.dir}/**/*" />
+            </fileset>
+        </copy>
+        <zip destfile="./../${name}-${version}.zip"
+            basedir="${basedir}" 
+            includes="${name}-${version}/" />
+        <delete dir="${name}-${version}" />
+    </target>
+    
+    <target name="dist">
+        <delete includeemptydirs="true">
+            <fileset dir="${dist.dir}" includes="**/*" />
+        </delete>
+        <antcall target="validate">
+            <param name="file" value="${src.dir}/${name}" />
+        </antcall>
+        <copy todir="${dist.dir}">
+            <fileset dir="${src.dir}"/>
+        </copy>
+        <antcall target="process">
+            <param name="file" value="${dist.dir}/${name}" />
+        </antcall>
+        <antcall target="compress">
+            <param name="file" value="${dist.dir}/${name}-${version}.min.js" />
+        </antcall>
+    </target>
+    
+    <target name="validate">
+        <java classpath="lib/js.jar" 
+            classname="org.mozilla.javascript.tools.shell.Main"
+            failonerror="true" fork="true">
+            <arg line="${lib.dir}/rhino.js ${file}.js" />
+        </java>
+    </target>
+    
+    <target name="process">
+        <tstamp>
+            <format property="timestamp" pattern="yyyy-MM-dd HH:mm:ss Z (EEE, dd MMM yyyy)" />
+        </tstamp>
+        <replaceregexp match="\$\{version\}" file="${file}.js">
+            <substitution expression="${version}"/>
+        </replaceregexp>
+        <replaceregexp match="\$\{timestamp\}" file="${file}.js">
+            <substitution expression="${timestamp}"/>
+        </replaceregexp>
+        <copy file="${file}.js" tofile="${file}-${version}.min.js" />
+        <move file="${file}.js" tofile="${file}-${version}.js" />
+    </target>
+    
+    <target name="compress">
+        <java jar="${lib.dir}/compiler.jar"
+            failonerror="true" fork="true">
+            <arg line="--js=${file} --js_output_file=${file}.tmp" />
+        </java>
+        <concat destfile="${file}.lic">
+            <filelist files="${file}" />
+            <filterchain>
+                <headfilter lines="10" />
+            </filterchain>
+        </concat>
+        <concat destfile="${file}">
+            <filelist files="${file}.lic,${file}.tmp" />
+        </concat>
+        <delete>
+            <filelist files="${file}.lic,${file}.tmp" />
+        </delete>
+    </target>
+
+    <target name="sample">
+        <delete>
+            <fileset dir="${dir}" includes="${name}-\d.\d+.min.js" />
+        </delete>
+        <copy file="${dist.dir}/${name}-${version}.min.js" todir="${dir}" overwrite="true" />
+    </target>
+    
+    <target name="samples">
+        <antcall target="sample">
+            <param name="dir" value="${samples.dir}/accordion" />
+        </antcall>
+        <antcall target="sample">
+            <param name="dir" value="${samples.dir}/api" />
+        </antcall>
+        <antcall target="sample">
+            <param name="dir" value="${samples.dir}/crawling" />
+        </antcall>
+        <antcall target="sample">
+            <param name="dir" value="${samples.dir}/events" />
+        </antcall>
+        <antcall target="sample">
+            <param name="dir" value="${samples.dir}/express/public" />
+        </antcall>
+        <antcall target="sample">
+            <param name="dir" value="${samples.dir}/form" />
+        </antcall>
+        <antcall target="sample">
+            <param name="dir" value="${samples.dir}/state" />
+        </antcall>
+        <antcall target="sample">
+            <param name="dir" value="${samples.dir}/tabs" />
+        </antcall>
+    </target>
+    
+    <target name="test">
+        <delete>
+            <fileset dir="${test.dir}" includes="${name}-\d.\d+.min.js" />
+        </delete>
+        <copy file="${dist.dir}/${name}-${version}.min.js" todir="${test.dir}" overwrite="true" />
+    </target>
+    
+</project>
